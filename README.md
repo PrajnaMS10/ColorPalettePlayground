@@ -61,4 +61,4 @@ This project demonstrates DOM manipulation, event handling, color generation log
 ---
 
 ## 📝 Author
-Developed as part of **Lab 5: Color Palette Playground**  
+Developed as part of **Foundations of Generative AI Lab 6**  
