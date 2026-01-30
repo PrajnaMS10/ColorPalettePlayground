@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Color Palette Playground</title>
+  <style>
+    /* --- Theme: Dark (default) and Light. Pure black/white per spec. --- */
+    :root {
+      --bg: #000000;
+      --surface: #1a1a1a;
+      --text: #ffffff;
+      --surface-soft: #222;
+      --highlight: #e94560;
+      --radius: 12px;
+      --shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+      transition: background-color 0.25s ease, color 0.25s ease;
+    }
+
+    body.theme-light {
+      --bg: #ffffff;
+      --surface: #f0f0f0;
+      --text: #111111;
+      --surface-soft: #e8e8e8;
+      --shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      transition: background-color 0.25s ease, color 0.25s ease;
+    }
+
+    /* Main heading */
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+      letter-spacing: -0.02em;
+    }
+
+    /* Flexbox: 5 color boxes in a row with gap and wrap for small screens */
+    .palette {
+      display: flex;
+      flex-direction: row;
+      gap: 1.25rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    /* One color box: swatch + hex label; clickable to copy. Lock icon in corner. */
+    .color-box {
+      flex: 1 1 140px;
+      min-width: 120px;
+      max-width: 180px;
+      border-radius: var(--radius);
+      overflow: visible;
+      box-shadow: var(--shadow);
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+      position: relative;
+      border: 3px solid transparent;
+    }
+
+    .color-box:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+    }
+
+    /* Locked state: visible border so user clearly sees which swatches are locked */
+    .color-box.locked {
+      border-color: var(--text);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3), 0 0 0 1px var(--text);
+    }
+
+    body.theme-light .color-box.locked {
+      border-color: #111;
+    }
+
+    /* The colored area of each box (top corners rounded to match box) */
+    .color-swatch {
+      height: 140px;
+      width: 100%;
+      position: relative;
+      border-radius: var(--radius) var(--radius) 0 0;
+    }
+
+    /* Lock button: top-right of swatch; stops propagation so clicking it doesn't copy hex */
+    .lock-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 32px;
+      height: 32px;
+      border: none;
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.5);
+      color: #fff;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s ease, transform 0.15s ease;
+    }
+
+    .lock-btn:hover {
+      background: rgba(0, 0, 0, 0.7);
+      transform: scale(1.05);
+    }
+
+    .lock-btn svg {
+      width: 18px;
+      height: 18px;
+      fill: currentColor;
+    }
+
+    /* Label showing hex code below the swatch */
+    .color-hex {
+      padding: 0.75rem 1rem;
+      background: var(--surface);
+      font-family: 'Consolas', 'Monaco', monospace;
+      font-size: 0.85rem;
+      text-align: center;
+      font-weight: 500;
+    }
+
+    /* "Copied!" feedback overlay */
+    .copied-toast {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #fff;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+
+    .color-box.copied .copied-toast {
+      opacity: 1;
+    }
+
+    /* Button row: Randomize, Export, Theme toggle */
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1rem;
+    }
+
+    .btn {
+      padding: 0.85rem 1.75rem;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #fff;
+      background: var(--highlight);
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      box-shadow: var(--shadow);
+      transition: transform 0.15s ease, background 0.2s ease;
+    }
+
+    .btn:hover {
+      background: #ff6b6b;
+      transform: scale(1.02);
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    /* Theme toggle: outline style so it’s distinct */
+    .theme-btn {
+      background: transparent;
+      color: var(--text);
+      border: 2px solid var(--text);
+    }
+
+    .theme-btn:hover {
+      background: var(--surface);
+      color: var(--text);
+    }
+
+    /* Export panel: appears below buttons when user exports */
+    .export-panel {
+      width: 100%;
+      max-width: 360px;
+      margin-top: 0.5rem;
+    }
+
+    .export-panel.hidden {
+      display: none;
+    }
+
+    .export-panel label {
+      display: block;
+      font-size: 0.9rem;
+      margin-bottom: 0.5rem;
+      color: var(--text);
+    }
+
+    .export-textarea {
+      width: 100%;
+      min-height: 120px;
+      padding: 0.75rem 1rem;
+      font-family: 'Consolas', 'Monaco', monospace;
+      font-size: 0.9rem;
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--surface-soft);
+      border-radius: var(--radius);
+      resize: vertical;
+    }
+
+    .export-textarea:focus {
+      outline: 2px solid var(--highlight);
+      outline-offset: 2px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎨 Color Palette Playground</h1>
+
+  <!-- Flexbox row of 5 color boxes (populated by JS) -->
+  <div class="palette" id="palette"></div>
+
+  <!-- Controls: Randomize, Export, Light/Dark theme toggle -->
+  <div class="controls">
+    <button type="button" class="btn" id="randomizeBtn">Randomize Palette</button>
+    <button type="button" class="btn" id="exportBtn">Export Palette</button>
+    <button type="button" class="btn theme-btn" id="themeBtn" aria-label="Toggle light or dark mode">Light / Dark Mode</button>
+  </div>
+
+  <!-- Export panel: read-only textarea with one hex per line (shown when Export is clicked) -->
+  <div class="export-panel hidden" id="exportPanel">
+    <label for="exportTextarea">Current palette (copy below):</label>
+    <textarea id="exportTextarea" class="export-textarea" readonly placeholder="Click Export Palette to show colors"></textarea>
+  </div>
+
+  <script>
+    // ========== COLOR GENERATION (HSL → hex, harmonious palettes) ==========
+
+    /**
+     * Converts HSL to hex for display and copying.
+     * @param {number} h - Hue in degrees (0–360). 0=red, 120=green, 240=blue.
+     * @param {number} s - Saturation 0–100 (percentage).
+     * @param {number} l - Lightness 0–100 (percentage).
+     * @returns {string} Hex color e.g. "#A1B2C3"
+     */
+    function hslToHex(h, s, l) {
+      h = h % 360;
+      if (h < 0) h += 360;
+      s = Math.max(0, Math.min(100, s)) / 100;
+      l = Math.max(0, Math.min(100, l)) / 100;
+
+      const c = (1 - Math.abs(2 * l - 1)) * s;
+      const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+      const m = l - c / 2;
+
+      let r = 0, g = 0, b = 0;
+      if (h < 60) {
+        r = c; g = x; b = 0;
+      } else if (h < 120) {
+        r = x; g = c; b = 0;
+      } else if (h < 180) {
+        r = 0; g = c; b = x;
+      } else if (h < 240) {
+        r = 0; g = x; b = c;
+      } else if (h < 300) {
+        r = x; g = 0; b = c;
+      } else {
+        r = c; g = 0; b = x;
+      }
+
+      function toHex(n) {
+        const v = Math.round((n + m) * 255);
+        return Math.max(0, Math.min(255, v)).toString(16).padStart(2, '0');
+      }
+      return '#' + (toHex(r) + toHex(g) + toHex(b)).toUpperCase();
+    }
+
+    function clampWithVariation(value, min, max, variation) {
+      const v = value + (Math.random() * 2 - 1) * variation;
+      return Math.max(min, Math.min(max, v));
+    }
+
+    /**
+     * Generate 5 harmonious colors: one random base hue (0–360), then vary
+     * saturation and lightness slightly so all colors are in the same hue family.
+     */
+    function generatePaletteColors() {
+      const baseHue = Math.random() * 360;
+      const baseSaturation = 55 + Math.random() * 25;
+      const baseLightness = 45 + Math.random() * 20;
+
+      const colors = [];
+      for (let i = 0; i < 5; i++) {
+        const h = clampWithVariation(baseHue, 0, 360, 12);
+        const s = clampWithVariation(baseSaturation, 40, 90, 15);
+        const l = clampWithVariation(baseLightness, 35, 75, 12);
+        colors.push(hslToHex(h, s, l));
+      }
+      return colors;
+    }
+
+    // ========== LOCK MECHANISM ==========
+    // Locked swatches keep their color when "Randomize Palette" is clicked.
+    // We read lock state from each box's data-locked when randomizing.
+
+    /** Return SVG for lock (closed) icon. */
+    function lockIconSvg() {
+      return '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>';
+    }
+
+    /** Return SVG for unlock (open) icon. */
+    function unlockIconSvg() {
+      return '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 17c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6-9h-1V6c0-2.76-2.24-5-5-5-2.28 0-4.27 1.54-4.84 3.75l1.68.67C9.5 4.5 10.63 3.5 12 3.5c1.66 0 3 1.34 3 3v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm0 12H6V10h12v10z"/></svg>';
+    }
+
+    /**
+     * Create one color box: swatch (with lock button), hex label, "Copied!" toast.
+     * @param {string} hex - Hex color code.
+     * @param {number} index - Swatch index (0–4) for lock state.
+     * @param {boolean} isLocked - Whether this swatch is locked.
+     */
+    function createColorBox(hex, index, isLocked) {
+      const box = document.createElement('div');
+      box.className = 'color-box';
+      box.setAttribute('data-hex', hex);
+      box.setAttribute('data-index', String(index));
+      box.setAttribute('data-locked', isLocked ? 'true' : 'false');
+      if (isLocked) box.classList.add('locked');
+
+      const swatch = document.createElement('div');
+      swatch.className = 'color-swatch';
+      swatch.style.backgroundColor = hex;
+
+      // Lock button: toggles locked state; stopPropagation so clicking it doesn't copy hex
+      const lockBtn = document.createElement('button');
+      lockBtn.type = 'button';
+      lockBtn.className = 'lock-btn';
+      lockBtn.setAttribute('aria-label', isLocked ? 'Unlock this color' : 'Lock this color');
+      lockBtn.innerHTML = isLocked ? lockIconSvg() : unlockIconSvg();
+      lockBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var nowLocked = box.getAttribute('data-locked') !== 'true';
+        box.setAttribute('data-locked', nowLocked ? 'true' : 'false');
+        box.classList.toggle('locked', nowLocked);
+        lockBtn.innerHTML = nowLocked ? lockIconSvg() : unlockIconSvg();
+        lockBtn.setAttribute('aria-label', nowLocked ? 'Unlock this color' : 'Lock this color');
+      });
+
+      swatch.appendChild(lockBtn);
+      box.appendChild(swatch);
+
+      const label = document.createElement('div');
+      label.className = 'color-hex';
+      label.textContent = hex;
+      box.appendChild(label);
+
+      const toast = document.createElement('div');
+      toast.className = 'copied-toast';
+      toast.textContent = 'Copied!';
+      box.appendChild(toast);
+
+      return box;
+    }
+
+    /** Get current hex and locked state from each swatch in the palette (for randomize). */
+    function getPaletteState() {
+      var boxes = document.querySelectorAll('#palette .color-box');
+      var colors = [];
+      var locked = [];
+      for (var i = 0; i < boxes.length; i++) {
+        colors.push(boxes[i].getAttribute('data-hex'));
+        locked.push(boxes[i].getAttribute('data-locked') === 'true');
+      }
+      return { colors: colors, locked: locked };
+    }
+
+    function showCopiedFeedback(box) {
+      box.classList.add('copied');
+      setTimeout(function () {
+        box.classList.remove('copied');
+      }, 1200);
+    }
+
+    function copyToClipboard(hex) {
+      navigator.clipboard.writeText(hex).then(function () {}).catch(function () {
+        var input = document.createElement('input');
+        input.value = hex;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand('copy');
+        document.body.removeChild(input);
+      });
+    }
+
+    /**
+     * Render the palette with the given hex colors and lock states.
+     * @param {string[]} colors - Array of 5 hex strings.
+     * @param {boolean[]} lockedStates - Optional; which indices are locked (default all false).
+     */
+    function renderPalette(colors, lockedStates) {
+      var paletteEl = document.getElementById('palette');
+      paletteEl.innerHTML = '';
+      var locks = lockedStates || [false, false, false, false, false];
+
+      for (var i = 0; i < colors.length; i++) {
+        var hex = colors[i];
+        var box = createColorBox(hex, i, locks[i] || false);
+
+        box.addEventListener('click', function (e) {
+          if (e.target.closest('.lock-btn')) return;
+          var h = this.getAttribute('data-hex');
+          copyToClipboard(h);
+          showCopiedFeedback(this);
+        });
+
+        paletteEl.appendChild(box);
+      }
+    }
+
+    /**
+     * Randomize palette: generate 5 new harmonious colors, but keep hex for any
+     * swatch that is locked (lock mechanism).
+     */
+    function randomizePalette() {
+      var state = getPaletteState();
+      var currentColors = state.colors;
+      var locked = state.locked;
+
+      if (currentColors.length === 0) {
+        renderPalette(generatePaletteColors(), [false, false, false, false, false]);
+        return;
+      }
+
+      var newColors = generatePaletteColors();
+      var finalColors = [];
+      for (var i = 0; i < 5; i++) {
+        finalColors.push(locked[i] ? currentColors[i] : newColors[i]);
+      }
+      renderPalette(finalColors, locked);
+    }
+
+    // ========== THEME TOGGLE (Light / Dark Mode) ==========
+    // Pure white (#ffffff) and pure black (#000000) per spec; applied via body class.
+
+    function initTheme() {
+      var saved = localStorage.getItem('palette-theme');
+      if (saved === 'light') document.body.classList.add('theme-light');
+      else document.body.classList.remove('theme-light');
+    }
+
+    function toggleTheme() {
+      document.body.classList.toggle('theme-light');
+      localStorage.setItem('palette-theme', document.body.classList.contains('theme-light') ? 'light' : 'dark');
+    }
+
+    // ========== EXPORT FUNCTIONALITY ==========
+    // Collect all current hex codes and show them one per line in a read-only textarea.
+
+    function exportPalette() {
+      var boxes = document.querySelectorAll('#palette .color-box');
+      var hexCodes = [];
+      for (var i = 0; i < boxes.length; i++) {
+        hexCodes.push(boxes[i].getAttribute('data-hex'));
+      }
+      var text = hexCodes.join('\n');
+      var textarea = document.getElementById('exportTextarea');
+      var panel = document.getElementById('exportPanel');
+      textarea.value = text;
+      panel.classList.remove('hidden');
+      textarea.select();
+    }
+
+    // ---------- Init and event bindings ----------
+    initTheme();
+    randomizePalette();
+
+    document.getElementById('randomizeBtn').addEventListener('click', randomizePalette);
+    document.getElementById('exportBtn').addEventListener('click', exportPalette);
+    document.getElementById('themeBtn').addEventListener('click', toggleTheme);
+  </script>
+</body>
+</html>
